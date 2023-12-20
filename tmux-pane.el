@@ -54,6 +54,15 @@
 	(setq new-pane pane)))
     new-pane))
 
+(defun tmux-send-command (pane-id command &rest args)
+  "Execute COMMAND with ARGS in PANE-ID."
+  (let ((command-args (list
+		       (string-join (cons command args) " ")
+		       "ENTER")))
+    (push pane-id command-args)
+    (push "-t" command-args)
+    (push "send-keys" command-args)
+    (apply #'tmux-command-output command-args)))
 
 (provide 'tmux-pane)
 ;;; tmux-pane.el ends here

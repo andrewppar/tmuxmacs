@@ -96,10 +96,10 @@ sessions are listed."
 			  "list-windows" "-a" "-F" "#{window_id} #{session_id}")))
     (alist-get window-id window->session nil nil #'equal)))
 
-
-
-
-
+(defun tmux-kill-window (window-name-or-id)
+  "Kill tmux window with WINDOW-NAME-OR-ID."
+  (when-let ((window-id (tmux-window-get window-name-or-id)))
+    (tmux-command-output "kill-window" "-t" window-id)))
 
 (provide 'tmux-window)
 ;;; tmux-window.el ends here

@@ -18,11 +18,11 @@
 
 (defun tmux-list-panes (&optional window-name-or-id)
   "List all tmux panes ids optionally for WINDOW-NAME-OR-ID."
-  (let ((window-id (tmux-window-get window-name-or-id))
+  (let ((window (tmux-window/find window-name-or-id))
 	(args (list "-F" "#{pane_id}")))
-    (if window-id
+    (if window
 	(progn
-	  (push window-id args)
+	  (push window args)
 	  (push "-t" args))
       (push "-a" args))
     (push "list-panes" args)

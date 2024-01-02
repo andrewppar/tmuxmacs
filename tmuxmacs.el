@@ -50,8 +50,14 @@
 Only intended to be called from a transient menu."
   (interactive (list  (transient-args 'tmux-window-create-transient)))
   (let ((session (tmuxmacs--get-arg-value "--session" args))
-	(name (tmuxmacs--get-arg-value "--name" args)))
-    (tmux-window/make name session)))
+	(name (tmuxmacs--get-arg-value "--name" args))
+	(command (tmuxmacs--get-arg-value "--command" args)))
+    (if command
+	(save-tmux-excursion
+	  (let* ((window (tmux-window/make name session))
+		 (pane   (car (tmux-pane/list window))))
+	    (apply #'tmux-pane/send-command pane (split-string command))))
+      (tmux-window/make name session))))
 
 (defun tmux--get-window ()
   "Prompt user to select a window."
@@ -135,12 +141,6 @@ Only intended to be called from a transient menu."
   :shortarg "-n"
   :argument "--name=")
 
-(transient-define-prefix tmux-session-create-transient ()
-  ["Arguments"
-   (name-option)]
-  ["session create"
-   ("c" "create" tmuxmacs/create-session)])
-
 (transient-define-infix session-option ()
   :description "Select a session"
   :class 'transient-option
@@ -148,13 +148,26 @@ Only intended to be called from a transient menu."
   :argument "--session="
   :choices (tmux-session/list))
 
+(transient-define-infix command-option ()
+  :description "Send a command"
+  :class 'transient-option
+  :shortarg "-c"
+  :argument "--command=")
+
 (transient-define-prefix tmux-window-create-transient ()
   "Create a window."
   ["Arguments"
    (name-option)
-   (session-option)]
+   (session-option)
+   (command-option)]
   ["window create"
    ("c" "create" tmuxmacs/create-window)])
+
+(transient-define-prefix tmux-session-create-transient ()
+  ["Arguments"
+   (name-option)]
+  ["session create"
+   ("c" "create" tmuxmacs/create-session)])
 
 (transient-define-prefix tmux-window-transient ()
   "Tmuxmacs windows."

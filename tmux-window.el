@@ -20,7 +20,7 @@
 
 (defun tmux-window-id-by-name (name)
   "Get the id for the tmux window with NAME."
-  (alist-get name (tmux-window/list) nil nil #'equal))
+  (car (alist-get name (tmux-window/list) nil nil #'equal)))
 
 (defun tmux-focused-window-id ()
   "Return the window-id for the current tmux window."
@@ -59,37 +59,46 @@
           ;;;
 ;;;;;;;;;;;;;
 
-(defun tmux-window/list (&optional session)
+(defun tmux-window/list (&optional session with-session-info?)
   "List all tmux windows as (name . id).
 
 If SESSION is given restrict to SESSION otherwise all windows in all
-sessions are listed."
-  (let ((args (list "-F" "#{window_name} #{window_id}")))
-    (if session
-	(setq args (cons "-t" (cons session args)))
-      (setq args (cons "-a" args)))
-    (setq args (cons "list-windows" args))
-    (apply #'tmux-command->alist args)))
+sessions are listed.
+
+If WITH-SESSION-INFO? is non-nil then include session_id in the output."
+  (let ((format-string "#{window_name} #{window_id}"))
+    (when with-session-info?
+      (setq format-string (concat format-string " #{session_id}")))
+    (let ((args (list "-F" format-string)))
+      (if session
+	  (setq args (cons "-t" (cons session args)))
+	(setq args (cons "-a" args)))
+      (setq args (cons "list-windows" args))
+      (mapcar #'split-string (apply #'tmux-command-output-lines args)))))
 
 (defun tmux-window/make (&optional name session-id)
   "Create a new tmux window with NAME for SESSION-ID or the current session."
-  (let ((session (or session-id (tmux-current-session-id)))
-	(current-windows (tmux-window/list session-id)))
-    (save-tmux-excursion
-      (tmux-session/focus session)
-      (if name
-	  (tmux-command-output "new-window" "-n" name)
-	(tmux-command-output "new-window")))
+  (let ((session (or (tmux-session/find session-id) (tmux-current-session-id)))
+	(current-windows (tmux-window/list session-id))
+	(args '()))
+    (when name
+      (push name args)
+      (push "-n" args))
+    (when session
+      (push session args)
+      (push "-t" args))
+    (push "new-window" args)
+    (apply #'tmux-command-output args)
     ;; This is definitely not thread safe...
     (let ((new-windows (tmux-window/list session-id))
 	  (new-window-id nil))
       (if name
-	  (setq new-window-id (alist-get name new-windows nil nil #'equal))
+	  (setq new-window-id (car (alist-get name new-windows nil nil #'equal)))
 	;; This should probably be its own thing, but it feels like
 	;; something too general to write for this package
 	(cl-do ((todo new-windows (cdr new-windows))
 		(key (caar new-windows) (caar todo))
-		(value (cdar new-windows) (cdar todo)))
+		(value (cadar new-windows) (cadar todo)))
 	       ((or new-window-id (not key)) new-window-id)
 	  (when (not (alist-get key current-windows nil nil #'equal))
 	    (setq new-window-id value))))
@@ -98,8 +107,8 @@ sessions are listed."
 (defun tmux-window/find (window-name-or-id)
   "Get the window id for WINDOW-NAME-OR-ID."
   (let ((window-list (tmux-window/list)))
-    (or (alist-get window-name-or-id window-list nil nil #'equal)
-	(when (member window-name-or-id (mapcar #'cdr window-list))
+    (or (car (alist-get window-name-or-id window-list nil nil #'equal))
+	(when (member window-name-or-id (mapcar #'cadr window-list))
 	  window-name-or-id))))
 
 (defun tmux-window/find-or-make (name)

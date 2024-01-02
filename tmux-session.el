@@ -57,6 +57,10 @@ SESSION-ID is optional.  If it is not passed the current session id is used."
   "List the currently running tmux sessions."
   (tmux-command->alist "ls" "-F" "#{session_name} #{session_id}"))
 
+(defun tmux-sesion/focused ()
+  "Return the id of the currently active tmux session."
+  (tmux-current-session-id))
+
 (defun tmux-session/make (&optional name)
   "Create a new tmux session optionally giving it a NAME."
   (let* ((old-sessions (mapcar #'cdr (tmux-session/list)))

@@ -18,6 +18,171 @@
 ;; Does this mean that I think Emacs is the best OS? Yes.
 
 ;;; Code:
+(require 'tmux-session)
+(require 'tmux-window)
+(require 'tmux-pane)
+(require 'tmux-view)
+
+
+;;; Pane
+(defun tmuxmacs/send-pane-command ()
+  "Send a command to a tmux pane."
+  (interactive)
+  (let ((pane (ivy-completing-read "Select a pane " (tmux-pane/list) nil t))
+	(command-string (read-string "Command: ")))
+    (cl-destructuring-bind (command &rest args)
+	(split-string command-string)
+      (apply #'tmux-pane/send-command pane command args))))
+
+;;; Window
+
+(defun tmuxmacs--get-arg-value (arg-prefix args)
+  "Get the arg with ARG-PREFIX from ARGS."
+  (let ((result nil))
+    (dolist (arg args)
+      (when (string-prefix-p arg-prefix arg)
+	(setq result (cadr (split-string arg "=")) )))
+    result))
+
+(defun tmuxmacs/create-window (&optional args)
+  "Create a new tmux window with optional ARGS.
+
+Only intended to be called from a transient menu."
+  (interactive (list  (transient-args 'tmux-window-create-transient)))
+  (let ((session (tmuxmacs--get-arg-value "--session" args))
+	(name (tmuxmacs--get-arg-value "--name" args)))
+    (tmux-window/make name session)))
+
+(defun tmux--get-window ()
+  "Prompt user to select a window."
+  (let ((window->id (tmux-window/list)))
+    (cadr
+     (alist-get
+      (ivy-completing-read "Select a window " window->id nil t)
+      window->id
+      nil nil #'equal))))
+
+(defun tmux--get-session ()
+  "Get session id from a user interactively."
+  (let ((session->id (tmux-session/list)))
+    (alist-get
+     (ivy-completing-read "Select a session " session->id nil t)
+     session->id
+     nil nil #'equal)))
+
+(defun tmuxmacs/focus-window ()
+  "Switch focus to a window interactively."
+  (interactive)
+  (tmux-window/focus (tmux--get-window)))
+
+(defun tmuxmacs/kill-window ()
+  "Kill tmux window interactively."
+  (interactive)
+  (tmux-window/kill (tmux--get-window)))
+
+(defun tmuxmacs/rename-window ()
+  "Rename tmux window interactively."
+  (interactive)
+  (let ((window (tmux--get-window))
+	(name (read-string "Window name: ")))
+    (tmux-window/rename window name)))
+
+(defun tmuxmacs/send-window ()
+  "Send window to session interactively."
+  (interactive)
+  (let ((window (tmux--get-window))
+	(session (tmux--get-session)))
+    (tmux-window/to-session window session)))
+
+;;; session
+
+(defun tmuxmacs/create-session (&optional args)
+  "Create a new tmux session with optional ARGS.
+
+Only intended to be called from a transient menu."
+  (interactive (list  (transient-args 'tmux-window-create-transient)))
+  (let ((name (tmuxmacs--get-arg-value "--name" args)))
+    (tmux-session/make name)))
+
+(defun tmuxmacs/focus-session ()
+  "Set focus to tmux session interactively."
+  (interactive)
+  (tmux-session/focus (tmux--get-session)))
+
+(defun tmuxmacs/kill-session ()
+  "Kill a tmux session interactively."
+  (interactive)
+  (tmux-session/kill (tmux--get-session)))
+
+(defun tmuxmacs/rename-session ()
+  "Rename a tmux session interactively."
+  (interactive)
+  (let ((session (tmux--get-session))
+	(name (read-string "New session name: ")))
+    (tmux-session/rename session name)))
+
+;;; transients
+
+(transient-define-prefix tmux-pane-transient ()
+  "Tmuxmacs panes."
+  ["panes"
+   ("c" "command" tmuxmacs/send-pane-command)
+   ("v" "view pane information" tmux-view-panes)])
+
+(transient-define-infix name-option ()
+  :description "Add a name to an entity"
+  :class 'transient-option
+  :shortarg "-n"
+  :argument "--name=")
+
+(transient-define-prefix tmux-session-create-transient ()
+  ["Arguments"
+   (name-option)]
+  ["session create"
+   ("c" "create" tmuxmacs/create-session)])
+
+(transient-define-infix session-option ()
+  :description "Select a session"
+  :class 'transient-option
+  :shortarg "-s"
+  :argument "--session="
+  :choices (tmux-session/list))
+
+(transient-define-prefix tmux-window-create-transient ()
+  "Create a window."
+  ["Arguments"
+   (name-option)
+   (session-option)]
+  ["window create"
+   ("c" "create" tmuxmacs/create-window)])
+
+(transient-define-prefix tmux-window-transient ()
+  "Tmuxmacs windows."
+  ["windows"
+   ("c" "create" tmux-window-create-transient)
+   ("f" "focus" tmuxmacs/focus-window)
+   ("k" "kill" tmuxmacs/kill-window)
+   ("r" "rename" tmuxmacs/rename-window)
+   ("s" "send" tmuxmacs/send-window)
+   ("v" "view window information" tmux-view-windows)])
+
+(transient-define-prefix tmux-session-transient ()
+  "Tmuxmacs sessions."
+  ["sessions"
+   ("c" "create" tmux-session-create-transient)
+   ("f" "focus" tmuxmacs/focus-session)
+   ("k" "kill" tmuxmacs/kill-session)
+   ("r" "rename" tmuxmacs/rename-session)
+   ("v" "view session information" tmux-view-sessions)])
+
+(transient-define-prefix tmuxmacs ()
+  "Control tmux from Emacs."
+  ["tmux"
+   ("p" "pane" tmux-pane-transient)
+   ("s" "session" tmux-session-transient)
+   ("w" "window" tmux-window-transient)])
+
+
 
 (provide 'tmuxmacs)
 ;;; tmuxmacs.el ends here

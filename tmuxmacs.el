@@ -62,7 +62,7 @@ Only intended to be called from a transient menu."
 (defun tmux--get-window ()
   "Prompt user to select a window."
   (let ((window->id (tmux-window/list)))
-    (cadr
+    (car
      (alist-get
       (ivy-completing-read "Select a window " window->id nil t)
       window->id

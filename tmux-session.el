@@ -57,7 +57,7 @@ SESSION-ID is optional.  If it is not passed the current session id is used."
   "List the currently running tmux sessions."
   (tmux-command->alist "ls" "-F" "#{session_name} #{session_id}"))
 
-(defun tmux-sesion/focused ()
+(defun tmux-session/focused ()
   "Return the id of the currently active tmux session."
   (tmux-current-session-id))
 

@@ -90,7 +90,7 @@ Option: WITH-SESSION? Provide session information for each pane."
 
 (defun tmux-pane/split (&optional pane-id horizontal?)
   "Split PANE-ID vertically unless HORIZONTAL? is non-nil."
-  (let* ((all-panes (tmux-list-panes))
+  (let* ((all-panes (tmux-pane/list))
 	 (pane (or pane-id (tmux-current-pane-id)))
 	 (args (list "-t" pane))
 	 (new-pane nil))
@@ -98,7 +98,7 @@ Option: WITH-SESSION? Provide session information for each pane."
       (push "-h" args))
     (push "split-window" args)
     (apply #'tmux-command-output args)
-    (dolist (pane (tmux-list-panes))
+    (dolist (pane (tmux-pane/list))
       (unless (member pane all-panes)
 	(setq new-pane pane)))
     new-pane))

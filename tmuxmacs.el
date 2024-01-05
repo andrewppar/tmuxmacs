@@ -77,11 +77,11 @@
 
 (defun tmuxmacs/send-pane (&optional args)
   "Move a pane to another window with optional ARGS."
-  (interactive)
-  (let ((pane (tmux--get-pane))
-	(window (tmux--get-window))
-	(horizontal? (some (lambda (arg) (equal arg "--horizontal")) args)))
-    (tmux-pane/to-window pane window)))
+  (interactive (list (transient-args 'tmux-pane-send-transient)))
+  (let* ((horizontal? (some (lambda (arg) (equal arg "--horizontal")) args))
+	 (pane (tmux--get-pane))
+	 (window (tmux--get-window)))
+    (tmux-pane/to-window pane window horizontal?)))
 
 ;;; Window
 
@@ -89,7 +89,7 @@
   "Create a new tmux window with optional ARGS.
 
 Only intended to be called from a transient menu."
-  (interactive (list  (transient-args 'tmux-window-create-transient)))
+  (interactive (list (transient-args 'tmux-window-create-transient)))
   (let ((session (tmuxmacs--get-arg-value "--session" args))
 	(name (tmuxmacs--get-arg-value "--name" args))
 	(command (tmuxmacs--get-arg-value "--command" args)))
@@ -156,9 +156,9 @@ Only intended to be called from a transient menu."
 (transient-define-prefix tmux-pane-send-transient ()
   "Send a pane."
   ["Arguments"
-   ("-h" "Horizontal split?" "--horizontal")]
+   ("h" "horizontal split?" "--horizontal")]
   ["send pane"
-   ("s" "send to windiw" tmuxmacs/send-pane)])
+   ("s" "send to window" tmuxmacs/send-pane)])
 
 (transient-define-prefix tmux-pane-transient ()
   "Tmuxmacs panes."

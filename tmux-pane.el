@@ -17,7 +17,7 @@
 (require 'tmux-session)
 (require 'tmux-window)
 
-(defun tmux-current-pane-id ()
+(defun tmux-pane/focused ()
   "Get the current tmux pane."
   (car (tmux-command-output-lines "display-message" "-p" "#{pane_id}")))
 
@@ -91,7 +91,7 @@ Option: WITH-SESSION? Provide session information for each pane."
 (defun tmux-pane/split (&optional pane-id horizontal?)
   "Split PANE-ID vertically unless HORIZONTAL? is non-nil."
   (let* ((all-panes (tmux-pane/list))
-	 (pane (or pane-id (tmux-current-pane-id)))
+	 (pane (or pane-id (tmux-pane/focused)))
 	 (args (list "-t" pane))
 	 (new-pane nil))
     (when horizontal?
@@ -107,7 +107,7 @@ Option: WITH-SESSION? Provide session information for each pane."
   "Return a pair of the window and session for PANE-ID.
 
 If PANE-ID is not supplied, the current pane is used."
-  (let ((pane (or (tmux-pane/find pane-id) (tmux-current-pane-id)))
+  (let ((pane (or (tmux-pane/find pane-id) (tmux-pane/focused)))
 	(lines (tmux-command-output-lines
 		"list-panes" "-a" "-F" "#{pane_id} #{window_id} #{session_id}"))
 	(result nil))
@@ -117,6 +117,32 @@ If PANE-ID is not supplied, the current pane is used."
 	(when (equal maybe-pane pane)
 	  (setq result (list window session)))))
     result))
+
+(defun tmux-pane/kill (&optional pane-id)
+  "Kill the pane with PANE-ID, if not specified, the current pane is killed."
+  (let ((pane (or pane-id (tmux-pane/focused))))
+    (tmux-command-output "kill-pane" "-t" pane)))
+
+(defun tmux-pane/to-window (pane-id &optional window-name-or-id horizontal?)
+  "Send PANE-ID to WINDOW-NAME-OR-ID.
+If no window is specified then a new one is created.
+If HORIZONTAL? is specified the split is made horizontally."
+  (interactive)
+  (save-tmux-excursion
+    (let* ((window (if window-name-or-id
+		       (tmux-window/find window-name-or-id)
+		     (tmux-window/make)))
+	   (to-kill (unless window-name-or-id
+		      (car (tmux-pane/list window)))))
+      ;; if we specified a window but it can't be found, back out
+      (when window
+	(let ((args (list "-s" pane-id "-t" window)))
+	  (when horizontal?
+	    (push "-h" args))
+	  (push "move-pane" args)
+	  (apply #'tmux-command-output args))
+	(when to-kill
+	  (tmux-pane/kill to-kill))))))
 
 (provide 'tmux-pane)
 ;;; tmux-pane.el ends here

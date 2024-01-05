@@ -64,16 +64,11 @@ SESSION-ID is optional.  If it is not passed the current session id is used."
 (defun tmux-session/make (&optional name)
   "Create a new tmux session optionally giving it a NAME."
   (let* ((old-sessions (mapcar #'cdr (tmux-session/list)))
-	 (args '("-d" "new-session"))
-	 (new-session-id nil))
+	 (args '( "#{session_id}" "-F" "-P" "-d" "new-session")))
     (when name
       (setq args (cons name (cons "-s" args))))
     (setq args (reverse args))
-    (apply #'tmux-command-output args)
-    (dolist (session-id (mapcar #'cdr (tmux-session/list)))
-      (unless (member session-id old-sessions)
-	(setq new-session-id session-id)))
-    new-session-id))
+    (string-trim (apply #'tmux-command-output args))))
 
 (defun tmux-session/find (session-name-or-id)
   "Get the session id for SESSION-NAME-OR-ID."

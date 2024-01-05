@@ -80,7 +80,7 @@ If WITH-SESSION-INFO? is non-nil then include session_id in the output."
   "Create a new tmux window with NAME for SESSION-ID or the current session."
   (let ((session (or (tmux-session/find session-id) (tmux-current-session-id)))
 	(current-windows (tmux-window/list session-id))
-	(args '()))
+	(args '("-P" "-F" "#{window_id}")))
     (when name
       (push name args)
       (push "-n" args))
@@ -88,23 +88,9 @@ If WITH-SESSION-INFO? is non-nil then include session_id in the output."
       (push session args)
       (push "-t" args))
     (push "new-window" args)
-    (apply #'tmux-command-output args)
-    ;; This is definitely not thread safe...
-    (let ((new-windows (tmux-window/list session-id))
-	  (new-window-id nil))
-      (if name
-	  (setq new-window-id (car (alist-get name new-windows nil nil #'equal)))
-	;; This should probably be its own thing, but it feels like
-	;; something too general to write for this package
-	(cl-do ((todo new-windows (cdr new-windows))
-		(key (caar new-windows) (caar todo))
-		(value (cadar new-windows) (cadar todo)))
-	       ((or new-window-id (not key)) new-window-id)
-	  (when (not (alist-get key current-windows nil nil #'equal))
-	    (setq new-window-id value))))
-      new-window-id)))
+    (string-trim (apply #'tmux-command-output args))))
 
-(defun tmux-window/find (window-name-or-id)
+ (defun tmux-window/find (window-name-or-id)
   "Get the window id for WINDOW-NAME-OR-ID."
   (let ((window-list (tmux-window/list)))
     (or (car (alist-get window-name-or-id window-list nil nil #'equal))

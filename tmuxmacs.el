@@ -164,7 +164,7 @@ Only intended to be called from a transient menu."
   ["panes"
    ("c" "command" tmuxmacs/send-pane-command)
    ("k" "kill" tmux/kill-pane)
-   ("s" "send to window" tmux-pane-send-transient
+   ("s" "send to window" tmux-pane-send-transient)
    ("v" "view pane information" tmux-view-panes)])
 
 (transient-define-infix name-option ()

@@ -36,6 +36,11 @@
 	(push s result)))
     (reverse result)))
 
+(defun tmux-active? ()
+  "Is tmux running?"
+  (string-prefix-p "no server running" (string-trim (tmux-command-output))))
+
+
 (defun tmux-command->alist (&rest args)
   "Create an alist from ARGS.
 

@@ -179,7 +179,7 @@ Only intended to be called from a transient menu."
   :class 'transient-option
   :shortarg "s"
   :argument "--session="
-  :choices (when (tmux-active) (tmux-session/list)))
+  :choices (when (tmux-active?) (tmux-session/list)))
 
 (transient-define-infix command-option ()
   :description "Send a command"

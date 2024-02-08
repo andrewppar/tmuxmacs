@@ -92,7 +92,7 @@ Only intended to be called from a transient menu."
   (interactive (list (transient-args 'tmux-window-create-transient)))
   (let ((session (tmuxmacs--get-arg-value "--session" args))
 	(name (tmuxmacs--get-arg-value "--name" args))
-	(command (tmuxmacs--get-arg-value "--command" args)))
+	(command (tmuxmacs--get-arg-value "--eval" args)))
     (if command
 	(save-tmux-excursion
 	  (let* ((window (tmux-window/make name session))
@@ -184,8 +184,8 @@ Only intended to be called from a transient menu."
 (transient-define-infix command-option ()
   :description "Send a command"
   :class 'transient-option
-  :shortarg "c"
-  :argument "--command=")
+  :shortarg "e"
+  :argument "--eval=")
 
 (transient-define-prefix tmux-window-create-transient ()
   "Create a window."

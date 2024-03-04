@@ -36,7 +36,7 @@
   (let ((window->id (tmux-window/list)))
     (car
      (alist-get
-      (ivy-completing-read "Select a window " window->id nil t)
+      (ivy-completing-read "Select a window " window->id)
       window->id
       nil nil #'equal))))
 

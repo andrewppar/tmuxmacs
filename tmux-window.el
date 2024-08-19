@@ -49,12 +49,14 @@
   "Execute BODY returning to the current tmux window."
   (declare (indent 0))
   (let ((current-session (gensym))
-	(current-window  (gensym)))
+	(current-window  (gensym))
+	(result          (gensym)))
     `(let ((,current-session (tmux-current-session-id))
-	   (,current-window  (tmux-focused-window-id)))
-       ,@body
+	   (,current-window  (tmux-focused-window-id))
+	   (,result (progn ,@body)))
        (tmux-session/focus ,current-session)
-       (tmux-window/focus ,current-window))))
+       (tmux-window/focus ,current-window)
+       ,result)))
 
           ;;;
 ;;;;;;;;;;;;;

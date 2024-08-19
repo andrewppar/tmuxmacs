@@ -97,6 +97,27 @@ Option: WITH-SESSION? Provide session information for each pane."
     (tmux-command-output "send-keys" "-t" pane-id to-execute "ENTER" unlock "ENTER")
     (tmux-command-output "wait-for" "-L"  lock)))
 
+(defun tmux-pane/send-command-capturing-output (pane-id command &rest args)
+  "Execute COMMAND with ARGS in PANE-ID holding until completed and returning tail of output."
+  (let* ((lock (format "%s" (gensym "tmux")))
+	 (to-execute (string-join (cons command args) " "))
+	 (unlock (string-join (list "tmux" "wait-for" "-U" lock) " ")))
+    (tmux-command-output "wait-for" "-L" lock)
+    (tmux-command-output "send-keys" "-t" pane-id to-execute "ENTER" unlock "ENTER")
+    (tmux-command-output "wait-for" "-L"  lock)
+    (let ((back-output (reverse
+			(string-split
+			 (tmux-command-output "capture-pane" "-p" "-t" pane-id)
+			 "\n")))
+	  (found-end? nil)
+	  (result '()))
+      (dolist (line back-output)
+	(if found-end?
+	    (push line result)
+	  (when (string-match unlock line)
+	    (setq found-end? t))))
+      (string-join result "\n"))))
+
 (defun tmux-pane/split (&optional pane-id horizontal?)
   "Split PANE-ID vertically unless HORIZONTAL? is non-nil."
   (let* ((all-panes (tmux-pane/list))

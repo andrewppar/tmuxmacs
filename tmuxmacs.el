@@ -60,6 +60,7 @@
     result))
 
 ;;; Pane
+;;;###autoload
 (defun tmuxmacs/send-pane-command ()
   "Send a command to a tmux pane."
   (interactive)
@@ -75,6 +76,7 @@
   (let ((pane (tmux--get-pane)))
     (tmux-pane/kill pane)))
 
+;;;###autoload
 (defun tmuxmacs/send-pane (&optional args)
   "Move a pane to another window with optional ARGS."
   (interactive (list (transient-args 'tmux-pane-send-transient)))
@@ -85,6 +87,7 @@
 
 ;;; Window
 
+;;;###autoload
 (defun tmuxmacs/create-window (&optional args)
   "Create a new tmux window with optional ARGS.
 
@@ -126,6 +129,7 @@ Only intended to be called from a transient menu."
 
 ;;; session
 
+;;;###autoload
 (defun tmuxmacs/create-session (&optional args)
   "Create a new tmux session with optional ARGS.
 

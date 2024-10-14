@@ -225,13 +225,17 @@ Only intended to be called from a transient menu."
    ("r" "rename" tmuxmacs/rename-session)
    ("v" "view session information" tmux-view-sessions)])
 
-;;;###autoload
-(transient-define-prefix tmuxmacs ()
+(transient-define-prefix tmuxmacs-transient ()
   "Control tmux from Emacs."
   ["tmux"
    ("p" "pane" tmux-pane-transient)
    ("s" "session" tmux-session-transient)
    ("w" "window" tmux-window-transient)])
+
+;;;###autoload
+(defun tmuxmacs ()
+  (interactive)
+  (tmuxmacs-transient))
 
 (provide 'tmuxmacs)
 ;;; tmuxmacs.el ends here

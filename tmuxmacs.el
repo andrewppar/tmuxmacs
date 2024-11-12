@@ -27,7 +27,7 @@
   "Get session id from a user interactively."
   (let ((session->id (tmux-session/list)))
     (alist-get
-     (ivy-completing-read "Select a session " session->id nil t)
+     (completing-read "Select a session " session->id nil t)
      session->id
      nil nil #'equal)))
 
@@ -36,7 +36,7 @@
   (let ((window->id (tmux-window/list)))
     (car
      (alist-get
-      (ivy-completing-read "Select a window " window->id)
+      (completing-read "Select a window " window->id)
       window->id
       nil nil #'equal))))
 
@@ -48,7 +48,7 @@
 		       pane-info
 		     (format "%s in %s:%s" pane window session)))
 		 (tmux-pane/list nil t t)))
-	 (pane (ivy-completing-read "Select a pane " panes nil t)))
+	 (pane (completing-read "Select a pane " panes nil t)))
     (car (split-string pane))))
 
 (defun tmuxmacs--get-arg-value (arg-prefix args)

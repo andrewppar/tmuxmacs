@@ -120,6 +120,7 @@ Only intended to be called from a transient menu."
 	(name (read-string "Window name: ")))
     (tmux-window/rename window name)))
 
+;;;###autoload
 (defun tmuxmacs/send-window ()
   "Send window to session interactively."
   (interactive)

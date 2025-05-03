@@ -18,7 +18,7 @@
 ;; Does this mean that I think Emacs is the best OS? Yes.
 
 ;;; Code:
-(require 'cl)
+(require 'cl-lib)
 (require 'tmux-pane)
 
 (defun tmux-buffer--make-line-string (line max-column)

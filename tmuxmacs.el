@@ -22,6 +22,7 @@
 (require 'tmux-window)
 (require 'tmux-pane)
 (require 'tmux-view)
+(require 'transient)
 
 (defun tmux--get-session ()
   "Get session id from a user interactively."
@@ -158,6 +159,7 @@ Only intended to be called from a transient menu."
 
 ;;; transients
 
+;;;###autoload
 (transient-define-prefix tmux-pane-send-transient ()
   "Send a pane."
   ["Arguments"
@@ -165,6 +167,7 @@ Only intended to be called from a transient menu."
   ["send pane"
    ("s" "send to window" tmuxmacs/send-pane)])
 
+;;;###autoload
 (transient-define-prefix tmux-pane-transient ()
   "Tmuxmacs panes."
   ["panes"
@@ -173,12 +176,15 @@ Only intended to be called from a transient menu."
    ("s" "send to window" tmux-pane-send-transient)
    ("v" "view pane information" tmux-view-panes)])
 
+;;;###autoload
 (transient-define-infix name-option ()
   :description "Add a name to an entity"
   :class 'transient-option
   :shortarg "n"
   :argument "--name=")
 
+
+;;;###autoload
 (transient-define-infix session-option ()
   :description "Select a session"
   :class 'transient-option
@@ -186,12 +192,15 @@ Only intended to be called from a transient menu."
   :argument "--session="
   :choices (when (tmux-active?) (tmux-session/list)))
 
+
+;;;###autoload
 (transient-define-infix command-option ()
   :description "Send a command"
   :class 'transient-option
   :shortarg "e"
   :argument "--eval=")
 
+;;;###autoload
 (transient-define-prefix tmux-window-create-transient ()
   "Create a window."
   ["Arguments"
@@ -201,12 +210,14 @@ Only intended to be called from a transient menu."
   ["window create"
    ("c" "create" tmuxmacs/create-window)])
 
+;;;###autoload
 (transient-define-prefix tmux-session-create-transient ()
   ["Arguments"
    (name-option)]
   ["session create"
    ("c" "create" tmuxmacs/create-session)])
 
+;;;###autoload
 (transient-define-prefix tmux-window-transient ()
   "Tmuxmacs windows."
   ["windows"
@@ -217,6 +228,7 @@ Only intended to be called from a transient menu."
    ("s" "send" tmuxmacs/send-window)
    ("v" "view window information" tmux-view-windows)])
 
+;;;###autoload
 (transient-define-prefix tmux-session-transient ()
   "Tmuxmacs sessions."
   ["sessions"
@@ -226,6 +238,7 @@ Only intended to be called from a transient menu."
    ("r" "rename" tmuxmacs/rename-session)
    ("v" "view session information" tmux-view-sessions)])
 
+;;;###autoload
 (transient-define-prefix tmuxmacs-transient ()
   "Control tmux from Emacs."
   ["tmux"
@@ -235,6 +248,7 @@ Only intended to be called from a transient menu."
 
 ;;;###autoload
 (defun tmuxmacs ()
+  "Load tmuxmacs."
   (interactive)
   (tmuxmacs-transient))
 

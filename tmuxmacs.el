@@ -81,7 +81,7 @@
 (defun tmuxmacs/send-pane (&optional args)
   "Move a pane to another window with optional ARGS."
   (interactive (list (transient-args 'tmux-pane-send-transient)))
-  (let* ((horizontal? (some (lambda (arg) (equal arg "--horizontal")) args))
+  (let* ((horizontal? (seq-some (lambda (arg) (equal arg "--horizontal")) args))
 	 (pane (tmux--get-pane))
 	 (window (tmux--get-window)))
     (tmux-pane/to-window pane window horizontal?)))

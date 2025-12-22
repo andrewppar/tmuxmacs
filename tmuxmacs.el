@@ -28,6 +28,14 @@
      (progn ,@body)
      (tmuxmacs-view/sessions)))
 
+(defmacro tmuxmacs/save-excursion (&rest body)
+  (let ((pane (gensym))
+	(result (gensym)))
+    `(let ((,pane (plist-get (tmuxmacs-pane/focused) :pane_id))
+	   (,result (progn ,@body)))
+       (tmuxmacs-pane/focus ,pane)
+       ,result)))
+
 ;;;###autoload
 (defun tmuxmacs ()
   (interactive)
@@ -91,12 +99,18 @@
 
 (defun tmuxmacs/send-command ()
   (interactive)
-  (tmuxmacs--with-buffer-refresh
-   (let ((pane-id (tmuxmacs-view/id-at-point)))
-     (if (equal (tmuxmacs-core/id-type pane-id) :pane)
-       (let ((command (read-string "command: ")))
-	 (tmuxmacs-pane/send-command pane-id command))
-       (message "Point is not at a pane.")))))
+  (let ((pane-id (tmuxmacs-view/id-at-point))
+	(tail-showing? (tmuxmacs-view/pane-tail-showing?)))
+    (tmuxmacs--with-buffer-refresh
+     (let ()
+       (if (equal (tmuxmacs-core/id-type pane-id) :pane)
+	   (let ((command (read-string "command: ")))
+	     (tmuxmacs-pane/send-command pane-id command))
+	 (message "Point is not at a pane."))))
+    (tmuxmacs-view/goto-id pane-id)
+    (when tail-showing?
+      (tmuxmacs-view/toggle-pane-tail))
+    (tmuxmacs-view/goto-id pane-id)))
 
 (defun tmuxmacs/move-window ()
   (interactive)
@@ -106,6 +120,31 @@
 	 (let ((session-id (cdr (tmuxmacs-view/session-selection))))
 	   (tmuxmacs-window/move window-id session-id))
        (warn "Point is not at a window")))))
+
+(defun tmuxmacs/pane-tail ()
+  (interactive)
+  (tmuxmacs-view/toggle-pane-tail))
+
+(defun tmuxmacs/pane-tail-refresh ()
+  (interactive)
+  (tmuxmacs-view/pane-tail-refresh))
+
+(defun tmuxmacs--formatted-panes ()
+  (mapcar
+   (lambda (pane)
+     (cl-destructuring-bind
+	   (&key pane_id window_id window_name session_name session_id &allow-other-keys)
+	 pane
+       (format "%s [%s] < %s"
+	       pane_id (or window_name window_id) (or session_name session_id))))
+   (tmuxmacs-pane/list)))
+
+(defun tmuxmacs/pane-send-command ()
+  (interactive)
+  (let* ((panes (tmuxmacs--formatted-panes))
+	 (selected-pane (car (split-string (completing-read "select a pane: " panes nil t))))
+	 (command (read-string "command: ")))
+    (tmuxmacs-pane/send-command selected-pane command)))
 
 (provide 'tmuxmacs)
 ;;; tmuxmacs.el ends here

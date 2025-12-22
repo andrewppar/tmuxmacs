@@ -57,5 +57,19 @@
 (defun tmuxmacs-window/move (window-id session-id)
   (tmuxmacs-core/execute (format "move-window -s '%s' -t '%s'" window-id session-id)))
 
+(defun tmuxmacs-window--id (window-name)
+
+(defun tmuxmacs-window/find (window-name-or-id)
+  (when window-name-or-id
+    (plist-get
+     (or (tmuxmacs-core/lookup :window_name window-name-or-id)
+	 (tmuxmacs-core/lookoup :window_id window-name-or-id))
+     :window_id)))
+
+(defun tmuxmacs-window/focused ()
+  (let ((key :window_id)
+	(command "display-message -p"))
+    (plist-get (car (tmuxmacs-core/execute command key)) key)))
+
 (provide 'tmuxmacs-window)
 ;;; tmuxmacs-window.el ends here

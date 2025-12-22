@@ -34,6 +34,10 @@
    :array-type 'list
    :false-object nil)))
 
+(defun tmuxmacs-core/pane-output (pane-id)
+  (shell-command-to-string
+   (format "tmux capture-pane -p -t '%s'" pane-id)))
+
 (defun tmuxmacs-core/entity-map ()
   (tmuxmacs-core/execute
    "list-panes -a"
@@ -48,6 +52,7 @@
   (cond ((string-prefix-p "$" identifier) :session)
 	((string-prefix-p "@" identifier) :window)
 	((string-prefix-p "%" identifier) :pane)))
+
 
 (provide 'tmuxmacs-core)
 ;;; tmuxmacs-core.el ends here

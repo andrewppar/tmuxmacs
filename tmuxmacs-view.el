@@ -200,11 +200,13 @@ session data."
 	    (propertize "-------------\n" 'face tmuxmacs-face/divider)))))
 	"\n")))))
 
+(defun tmv--line ()
+  (buffer-substring-no-properties
+   (line-beginning-position) (line-end-position)))
 
 (defun tmuxmacs-view/id-at-point ()
-  (let ((line (buffer-substring-no-properties
-	       (line-beginning-position) (line-end-position))))
-    (car (last (split-string (car (split-string line ":" t " ")) " ")))))
+  (when-let ((prefix (car (split-string (tmv--line) ":" t " "))))
+    (car (last (split-string  prefix " ")))))
 
 (defun tmuxmacs-view/type-at-point ()
   (tmuxmacs-core/id-type (tmuxmacs-view/id-at-point)))
@@ -225,6 +227,113 @@ session data."
 		       '()))
 	 (selection (completing-read "select session: " (mapcar #'car session-map) nil t)))
     (assoc selection session-map #'equal)))
+
+(defun tmv--trim-line (line max-length)
+  (let ((line-max (- max-length 3)))
+    (if (> (length line) line-max)
+	(format "%s..." (substring line 0 (- max-length 3)))
+      line)))
+
+(defun tmv--frame (lines)
+  (when lines
+    (let* ((max-line (apply #'max (mapcar #'length lines)))
+	   (top (format "╭%s╮" (make-string max-line (aref "─" 0))))
+	   (bottom (format "╰%s╯\n" (make-string max-line (aref "─" 0))))
+	   (result-lines (list bottom)))
+      (dolist (line (reverse lines))
+	(let ((padding (make-string (- max-line (length line)) (aref " " 0))))
+	  (push (format "│%s%s│" line padding) result-lines)))
+      (string-join (cons top result-lines) "\n"))))
+
+(defun tmv--frame-start-line? (line)
+  (string-prefix-p "╭" (string-trim line)))
+
+(defun tmv--frame-end-line? (line)
+  (string-prefix-p "╰" (string-trim line)))
+
+(defun tmv--within-frame? ()
+  (let* ((line (string-trim (tmv--line))))
+    (or (string-prefix-p "╭" line)
+	(let ((within-frame? (or (string-prefix-p "│" line)
+				 (string-prefix-p "╰" line))))
+	  (when within-frame?
+	    (let ((done? nil))
+	      (save-excursion
+		(forward-line -1)
+		(while (not done?)
+		  (cond ((bobp)
+			 (setq done? t within-frame? nil))
+			((string-prefix-p "╰" (string-trim (tmv--line)))
+			 (setq done? t within-frame? nil))
+			((string-prefix-p "╭" (string-trim (tmv--line)))
+			 (setq done? t within-frame? t))
+			(t (forward-line -1)))))
+	      within-frame?))))))
+
+(defun tmv--show-pane-tail ()
+  (let ((id (tmuxmacs-view/id-at-point)))
+    (when (equal (tmuxmacs-core/id-type id) :pane)
+      (forward-line)
+      (let* ((line-max (- (frame-width) 10)))
+	(let ((inhibit-read-only t))
+	  (insert
+	   (tmv--frame
+	    (mapcar
+	     (lambda (line) (tmv--trim-line line line-max))
+	     (split-string (tmuxmacs-pane/tail id) "\n")))))))))
+
+(defun tmv--delete-frame ()
+  (when (tmv--within-frame?)
+    (let ((at-start? nil))
+      (while (not at-start?)
+	(if (tmv--frame-start-line? (tmv--line))
+	    (setq at-start? t)
+	  (forward-line -1))))
+    (let ((at-end? nil))
+      (while (not at-end?)
+	(delete-line)
+	(when (tmv--frame-end-line? (tmv--line))
+	  (delete-line)
+	  (setq at-end? t))))))
+
+(defun tmv--pane-at-point? ()
+  (equal (tmuxmacs-core/id-type (tmuxmacs-view/id-at-point)) :pane))
+
+(defun tmv--hide-pane-tail ()
+  (let ((inhibit-read-only t))
+    (if (tmv--within-frame?)
+	(tmv--delete-frame)
+      (progn
+	(forward-line)
+	(tmv--delete-frame)))))
+
+(defun tmuxmacs-view/goto-id (id)
+  (goto-char (point-min))
+  (let ((done? nil))
+    (while (not done?)
+      (if (or (eobp)
+	      (equal (tmuxmacs-view/id-at-point) id))
+	  (setq done? t)
+	(forward-line)))))
+
+(defun tmuxmacs-view/pane-tail-showing? ()
+  (or (tmv--within-frame?)
+      (and (tmv--pane-at-point?)
+	      (save-excursion (progn (forward-line) (tmv--within-frame?))))))
+
+(defun tmuxmacs-view/toggle-pane-tail ()
+  (let ((id (tmuxmacs-view/id-at-point)))
+    (when (equal (tmuxmacs-core/id-type id) :pane)
+      (if (tmuxmacs-view/pane-tail-showing?)
+	  (tmv--hide-pane-tail)
+	(tmv--show-pane-tail))
+      (tmuxmacs-view/goto-id id))))
+
+(defun tmuxmacs-view/pane-tail-refresh ()
+  (when (tmuxmacs-view/pane-tail-showing?)
+    (tmuxmacs-view/toggle-pane-tail)
+    (tmuxmacs-view/toggle-pane-tail)))
+
 
 (provide 'tmuxmacs-view)
 ;;; tmuxmacs-view.el ends here

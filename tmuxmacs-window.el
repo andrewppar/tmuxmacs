@@ -54,5 +54,8 @@
 (defun tmuxmacs-window/kill (window-id)
   (tmuxmacs-core/execute (format "kill-window -t '%s'" window-id)))
 
+(defun tmuxmacs-window/move (window-id session-id)
+  (tmuxmacs-core/execute (format "move-window -s '%s' -t '%s'" window-id session-id)))
+
 (provide 'tmuxmacs-window)
 ;;; tmuxmacs-window.el ends here

@@ -214,5 +214,17 @@ session data."
 	       (line-beginning-position) (line-end-position))))
     (string-trim (string-join (cdr (split-string line ":")) ":"))))
 
+(defun tmuxmacs-view/session-selection ()
+  (let* ((session-map (seq-reduce
+		       (lambda (acc session)
+			 (cl-destructuring-bind
+			       (&key session_id session_name &allow-other-keys)
+			     session
+			   (cons (cons session_name session_id) acc)))
+		       (tmuxmacs-core/entity-map)
+		       '()))
+	 (selection (completing-read "select session: " (mapcar #'car session-map) nil t)))
+    (assoc selection session-map #'equal)))
+
 (provide 'tmuxmacs-view)
 ;;; tmuxmacs-view.el ends here

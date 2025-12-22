@@ -98,5 +98,14 @@
 	 (tmuxmacs-pane/send-command pane-id command))
        (message "Point is not at a pane.")))))
 
+(defun tmuxmacs/move-window ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let ((window-id (tmuxmacs-view/id-at-point)))
+     (if (equal (tmuxmacs-core/id-type window-id) :window)
+	 (let ((session-id (cdr (tmuxmacs-view/session-selection))))
+	   (tmuxmacs-window/move window-id session-id))
+       (warn "Point is not at a window")))))
+
 (provide 'tmuxmacs)
 ;;; tmuxmacs.el ends here

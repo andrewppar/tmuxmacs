@@ -57,7 +57,7 @@
 	 (split-style (tmp--parse-split split)))
     (tmuxmacs-core/execute (format "split-window -t %s %s" window-id split-style))
     (when command
-      (let ((pane (tmuxmacs-pane/focused)))
+      (let ((pane (plist-get (tmuxmacs-pane/focused) :pane_id)))
 	(tmuxmacs-pane/send-command pane command)))))
 
 (defun tmuxmacs-pane/send-command (pane-id command)
@@ -71,13 +71,26 @@
 (defun tmuxmacs-pane/kill (pane-id)
   (tmuxmacs-core/execute (format "kill-pane -t '%s'" pane-id)))
 
-(defun tmuxmacs-pane/tail (pane-id &optional amount)
-  (let ((line-count (or amount 5))
+(defun tmuxmacs-pane--pad-line (line-max line)
+  (let ((current-line-width (length line)))
+    (if (> current-line-width line-max)
+	(format "%s..." (substring line 0 (- line-max 3)))
+      (let ((pad-amount (- line-max current-line-width)))
+	(format "%s%s" line (string-join (make-list pad-amount " ")))))))
+
+(cl-defun tmuxmacs-pane/tail (pane-id &key lines width)
+  (let ((line-count (or lines 5))
+	(line-width (or width (- (window-width) 10)))
 	(lines (thread-last
 		 (split-string (tmuxmacs-core/pane-output pane-id) "\n")
 		 (seq-remove (lambda (line) (equal (string-trim line) "")))
 		 reverse)))
-    (string-join (reverse (seq-take lines line-count)) "\n")))
+    (string-join
+     (reverse
+      (mapcar
+       (lambda (line) (tmuxmacs-pane--pad-line line-width line))
+       (seq-take lines line-count)))
+     "\n")))
 
 (provide 'tmuxmacs-pane)
 ;;; tmuxmacs-pane.el ends here

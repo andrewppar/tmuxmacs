@@ -57,8 +57,6 @@
 (defun tmuxmacs-window/move (window-id session-id)
   (tmuxmacs-core/execute (format "move-window -s '%s' -t '%s'" window-id session-id)))
 
-(defun tmuxmacs-window--id (window-name)
-
 (defun tmuxmacs-window/find (window-name-or-id)
   (when window-name-or-id
     (plist-get

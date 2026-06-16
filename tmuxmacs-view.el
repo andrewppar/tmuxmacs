@@ -216,17 +216,20 @@ session data."
 	       (line-beginning-position) (line-end-position))))
     (string-trim (string-join (cdr (split-string line ":")) ":"))))
 
+(defun tmuxmacs-view--selection (prompt name-key id-key)
+  (let* ((name->id (mapcar
+		    (lambda (session)
+		      (cons (plist-get session name-key) (plist-get session id-key)))
+		    (tmuxmacs-core/entity-map)))
+	 (selection (completing-read prompt (mapcar #'car name->id) nil t)))
+    (assoc selection name->id #'equal)))
+
+
 (defun tmuxmacs-view/session-selection ()
-  (let* ((session-map (seq-reduce
-		       (lambda (acc session)
-			 (cl-destructuring-bind
-			       (&key session_id session_name &allow-other-keys)
-			     session
-			   (cons (cons session_name session_id) acc)))
-		       (tmuxmacs-core/entity-map)
-		       '()))
-	 (selection (completing-read "select session: " (mapcar #'car session-map) nil t)))
-    (assoc selection session-map #'equal)))
+  (tmuxmacs-view--selection "select session: " :session_name :session_id))
+
+(defun tmuxmacs-view/window-selection ()
+  (tmuxmacs-view--selection "select window: " :window_name :window_id))
 
 (defun tmv--trim-line (line max-length)
   (let ((line-max (- max-length 3)))

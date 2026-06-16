@@ -121,6 +121,23 @@
 	   (tmuxmacs-window/move window-id session-id))
        (warn "Point is not at a window")))))
 
+(defmacro tmuxmacs/save-excursion (&rest body)
+  (let ((window-id (gensym)))
+    `(let ((,window-id (tmuxmacs-window/focused)))
+       (progn ,@body)
+       (tmuxmacs-window/focus ,window-id))))
+
+(defun tmuxmacs/move-pane ()
+  (interactive)
+  (tmuxmacs/save-excursion
+   (tmuxmacs--with-buffer-refresh
+    (let ((pane-id (tmuxmacs-view/id-at-point)))
+      (if (equal (tmuxmacs-core/id-type pane-id) :pane)
+	  (let ((window-id (cdr (tmuxmacs-view/window-selection))))
+	    (tmuxmacs-pane/move pane-id window-id :horizontal? t))
+	(warn "point is not at a pane"))))))
+
+
 (defun tmuxmacs/pane-tail ()
   (interactive)
   (tmuxmacs-view/toggle-pane-tail))

@@ -92,5 +92,10 @@
        (seq-take lines line-count)))
      "\n")))
 
+(cl-defun tmuxmacs-pane/move (pane-id window-id &key horizontal?)
+  (let ((command (format "move-pane -s %s -t %s%s"
+			 pane-id window-id (if horizontal? " -h" ""))))
+  (tmuxmacs-core/execute command)))
+
 (provide 'tmuxmacs-pane)
 ;;; tmuxmacs-pane.el ends here

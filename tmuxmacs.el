@@ -77,7 +77,7 @@
   (tmuxmacs--with-buffer-refresh
    (let ((id (tmuxmacs-view/id-at-point))
 	 (name (tmuxmacs--prompt "window name: ")))
-     (when-let ((session (pcase (tmuxmacs-core/id-type id)
+     (when-let* ((session (pcase (tmuxmacs-core/id-type id)
 			   (:session id)
 			   (:window (tmuxmacs-window/session id))
 			   (:pane (tmuxmacs-pane/session id)))))

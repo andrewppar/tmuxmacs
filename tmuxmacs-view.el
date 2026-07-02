@@ -205,7 +205,7 @@ session data."
    (line-beginning-position) (line-end-position)))
 
 (defun tmuxmacs-view/id-at-point ()
-  (when-let ((prefix (car (split-string (tmv--line) ":" t " "))))
+  (when-let* ((prefix (car (split-string (tmv--line) ":" t " "))))
     (car (last (split-string  prefix " ")))))
 
 (defun tmuxmacs-view/type-at-point ()

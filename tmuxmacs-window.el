@@ -20,9 +20,13 @@
 (defun tmw--quote (item)
   (format "'%s'" item))
 
+(defun tmuxmacs-window/list ()
+  (seq-distinct (mapcar (lambda (e) (plist-get e :window_id)) (tmuxmacs-core/entity-map))))
+
 (cl-defun tmuxmacs-window/new (&key session name directory command)
   ;; TODO: support command
-  (let* ((session-id (tmw--quote
+  (let* ((old-windows (tmuxmacs-window/list))
+	 (session-id (tmw--quote
 		      (or (tmuxmacs-session/find session)
 			  (tmuxmacs-session/focused))))
 	 (args (reverse
@@ -37,7 +41,10 @@
 			   (t result))))
 		 (list (cons "-n" name) (cons "-c" directory))
 		 (reverse (list "new-window" "-t" session-id))))))
-    (tmuxmacs-core/execute (string-join args " "))))
+    (tmuxmacs-core/execute (string-join args " "))
+    (seq-some
+     (lambda (window) (and (not (member window old-windows)) window))
+     (tmuxmacs-window/list))))
 
 (defun tmuxmacs-window/session (window-id)
   (plist-get (tmuxmacs-core/lookup :window_id window-id) :session_id))

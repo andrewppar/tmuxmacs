@@ -18,239 +18,150 @@
 ;; Does this mean that I think Emacs is the best OS? Yes.
 
 ;;; Code:
-(require 'tmux-session)
-(require 'tmux-window)
-(require 'tmux-pane)
-(require 'tmux-view)
-(require 'transient)
+(require 'tmuxmacs-view)
+(require 'tmuxmacs-session)
+(require 'tmuxmacs-window)
+(require 'tmuxmacs-pane)
 
-(defun tmux--get-session ()
-  "Get session id from a user interactively."
-  (let ((session->id (tmux-session/list)))
-    (alist-get
-     (completing-read "Select a session " session->id nil t)
-     session->id
-     nil nil #'equal)))
+(defmacro tmuxmacs--with-buffer-refresh (&rest body)
+  `(progn
+     (progn ,@body)
+     (tmuxmacs-view/sessions)))
 
-(defun tmux--get-window ()
-  "Prompt user to select a window."
-  (let ((window->id (tmux-window/list)))
-    (car
-     (alist-get
-      (completing-read "Select a window " window->id)
-      window->id
-      nil nil #'equal))))
-
-(defun tmux--get-pane ()
-  "Prompt user to select a pane."
-  (let* ((panes (mapcar
-		 (lambda (pane-info)
-		   (cl-destructuring-bind (pane (_ window) (_ session))
-		       pane-info
-		     (format "%s in %s:%s" pane window session)))
-		 (tmux-pane/list nil t t)))
-	 (pane (completing-read "Select a pane " panes nil t)))
-    (car (split-string pane))))
-
-(defun tmuxmacs--get-arg-value (arg-prefix args)
-  "Get the arg with ARG-PREFIX from ARGS."
-  (let ((result nil))
-    (dolist (arg args)
-      (when (string-prefix-p arg-prefix arg)
-	(setq result (cadr (split-string arg "=")) )))
-    result))
-
-;;; Pane
-;;;###autoload
-(defun tmuxmacs/send-pane-command ()
-  "Send a command to a tmux pane."
-  (interactive)
-  (let ((pane (tmux--get-pane))
-	(command-string (read-string "Command: ")))
-    (cl-destructuring-bind (command &rest args)
-	(split-string command-string)
-      (apply #'tmux-pane/send-command pane command args))))
-
-(defun tmuxmacs/kill-pane ()
-  "Kill a pane."
-  (interactive)
-  (let ((pane (tmux--get-pane)))
-    (tmux-pane/kill pane)))
-
-;;;###autoload
-(defun tmuxmacs/send-pane (&optional args)
-  "Move a pane to another window with optional ARGS."
-  (interactive (list (transient-args 'tmux-pane-send-transient)))
-  (let* ((horizontal? (seq-some (lambda (arg) (equal arg "--horizontal")) args))
-	 (pane (tmux--get-pane))
-	 (window (tmux--get-window)))
-    (tmux-pane/to-window pane window horizontal?)))
-
-;;; Window
-
-;;;###autoload
-(defun tmuxmacs/create-window (&optional args)
-  "Create a new tmux window with optional ARGS.
-
-Only intended to be called from a transient menu."
-  (interactive (list (transient-args 'tmux-window-create-transient)))
-  (let ((session (tmuxmacs--get-arg-value "--session" args))
-	(name (tmuxmacs--get-arg-value "--name" args))
-	(command (tmuxmacs--get-arg-value "--eval" args)))
-    (if command
-	(save-tmux-excursion
-	  (let* ((window (tmux-window/make name session))
-		 (pane   (car (tmux-pane/list window))))
-	    (apply #'tmux-pane/send-command pane (split-string command))))
-      (tmux-window/make name session))))
-
-(defun tmuxmacs/focus-window ()
-  "Switch focus to a window interactively."
-  (interactive)
-  (tmux-window/focus (tmux--get-window)))
-
-(defun tmuxmacs/kill-window ()
-  "Kill tmux window interactively."
-  (interactive)
-  (tmux-window/kill (tmux--get-window)))
-
-(defun tmuxmacs/rename-window ()
-  "Rename tmux window interactively."
-  (interactive)
-  (let ((window (tmux--get-window))
-	(name (read-string "Window name: ")))
-    (tmux-window/rename window name)))
-
-;;;###autoload
-(defun tmuxmacs/send-window ()
-  "Send window to session interactively."
-  (interactive)
-  (let ((window (tmux--get-window))
-	(session (tmux--get-session)))
-    (tmux-window/to-session window session)))
-
-;;; session
-
-;;;###autoload
-(defun tmuxmacs/create-session (&optional args)
-  "Create a new tmux session with optional ARGS.
-
-Only intended to be called from a transient menu."
-  (interactive (list  (transient-args 'tmux-window-create-transient)))
-  (let ((name (tmuxmacs--get-arg-value "--name" args)))
-    (tmux-session/make name)))
-
-(defun tmuxmacs/focus-session ()
-  "Set focus to tmux session interactively."
-  (interactive)
-  (tmux-session/focus (tmux--get-session)))
-
-(defun tmuxmacs/kill-session ()
-  "Kill a tmux session interactively."
-  (interactive)
-  (tmux-session/kill (tmux--get-session)))
-
-(defun tmuxmacs/rename-session ()
-  "Rename a tmux session interactively."
-  (interactive)
-  (let ((session (tmux--get-session))
-	(name (read-string "New session name: ")))
-    (tmux-session/rename session name)))
-
-;;; transients
-
-;;;###autoload
-(transient-define-prefix tmux-pane-send-transient ()
-  "Send a pane."
-  ["Arguments"
-   ("h" "horizontal split?" "--horizontal")]
-  ["send pane"
-   ("s" "send to window" tmuxmacs/send-pane)])
-
-;;;###autoload
-(transient-define-prefix tmux-pane-transient ()
-  "Tmuxmacs panes."
-  ["panes"
-   ("c" "command" tmuxmacs/send-pane-command)
-   ("k" "kill" tmuxmacs/kill-pane)
-   ("s" "send to window" tmux-pane-send-transient)
-   ("v" "view pane information" tmux-view-panes)])
-
-;;;###autoload
-(transient-define-infix name-option ()
-  :description "Add a name to an entity"
-  :class 'transient-option
-  :shortarg "n"
-  :argument "--name=")
-
-
-;;;###autoload
-(transient-define-infix session-option ()
-  :description "Select a session"
-  :class 'transient-option
-  :shortarg "s"
-  :argument "--session="
-  :choices (when (tmux-active?) (tmux-session/list)))
-
-
-;;;###autoload
-(transient-define-infix command-option ()
-  :description "Send a command"
-  :class 'transient-option
-  :shortarg "e"
-  :argument "--eval=")
-
-;;;###autoload
-(transient-define-prefix tmux-window-create-transient ()
-  "Create a window."
-  ["Arguments"
-   (name-option)
-   (session-option)
-   (command-option)]
-  ["window create"
-   ("c" "create" tmuxmacs/create-window)])
-
-;;;###autoload
-(transient-define-prefix tmux-session-create-transient ()
-  ["Arguments"
-   (name-option)]
-  ["session create"
-   ("c" "create" tmuxmacs/create-session)])
-
-;;;###autoload
-(transient-define-prefix tmux-window-transient ()
-  "Tmuxmacs windows."
-  ["windows"
-   ("c" "create" tmux-window-create-transient)
-   ("f" "focus" tmuxmacs/focus-window)
-   ("k" "kill" tmuxmacs/kill-window)
-   ("r" "rename" tmuxmacs/rename-window)
-   ("s" "send" tmuxmacs/send-window)
-   ("v" "view window information" tmux-view-windows)])
-
-;;;###autoload
-(transient-define-prefix tmux-session-transient ()
-  "Tmuxmacs sessions."
-  ["sessions"
-   ("c" "create" tmux-session-create-transient)
-   ("f" "focus" tmuxmacs/focus-session)
-   ("k" "kill" tmuxmacs/kill-session)
-   ("r" "rename" tmuxmacs/rename-session)
-   ("v" "view session information" tmux-view-sessions)])
-
-;;;###autoload
-(transient-define-prefix tmuxmacs-transient ()
-  "Control tmux from Emacs."
-  ["tmux"
-   ("p" "pane" tmux-pane-transient)
-   ("s" "session" tmux-session-transient)
-   ("w" "window" tmux-window-transient)])
+(defmacro tmuxmacs/save-excursion (&rest body)
+  (let ((pane (gensym))
+	(result (gensym)))
+    `(let ((,pane (plist-get (tmuxmacs-pane/focused) :pane_id))
+	   (,result (progn ,@body)))
+       (tmuxmacs-pane/focus ,pane)
+       ,result)))
 
 ;;;###autoload
 (defun tmuxmacs ()
-  "Load tmuxmacs."
   (interactive)
-  (tmuxmacs-transient))
+  (tmuxmacs-view/sessions))
+
+(defun tmuxmacs/focus ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (tmuxmacs-core/execute
+    (format "switch -t '%s'" (tmuxmacs-view/id-at-point)))))
+
+(defun tmuxmacs/rename ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let* ((old-name (tmuxmacs-view/name-at-point))
+	  (id (tmuxmacs-view/id-at-point))
+	  (item-type (tmuxmacs-view/type-at-point))
+	  (item-type-name (substring (format "%s" item-type) 1))
+	  (new-name (read-string
+		     (format "new name for %s: " item-type-name)
+		     old-name)))
+     (pcase item-type
+       (:session (tmuxmacs-session/rename id new-name))
+       (:window (tmuxmacs-window/rename id new-name))))))
+
+(defun tmuxmacs/new-session ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let ((new-name (read-string "new session name: ")))
+     (tmuxmacs-session/new new-name))))
+
+(defun tmuxmacs--prompt (prompt)
+  (let ((result (read-string prompt)))
+    (unless (equal (string-trim result) "")
+      result)))
+
+(defun tmuxmacs/new-window ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let ((id (tmuxmacs-view/id-at-point))
+	 (name (tmuxmacs--prompt "window name: ")))
+     (when-let* ((session (pcase (tmuxmacs-core/id-type id)
+			   (:session id)
+			   (:window (tmuxmacs-window/session id))
+			   (:pane (tmuxmacs-pane/session id)))))
+       (tmuxmacs-window/new :session session :name name)))))
+
+(defun tmuxmacs/kill ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let* ((id (tmuxmacs-view/id-at-point))
+	  (id-type (tmuxmacs-core/id-type id))
+	  (id-name (tmuxmacs-view/name-at-point))
+	  (id-type-name (substring (format "%s" id-type) 1))
+	  (prompt (format "really kill %s %s with id %s?" id-type-name id-name id)))
+     (when (y-or-n-p prompt)
+       (pcase id-type
+	 (:session (tmuxmacs-session/kill id))
+	 (:window (tmuxmacs-window/kill id))
+	 (:pane (tmuxmacs-pane/kill id)))))))
+
+(defun tmuxmacs/send-command ()
+  (interactive)
+  (let ((pane-id (tmuxmacs-view/id-at-point))
+	(tail-showing? (tmuxmacs-view/pane-tail-showing?)))
+    (tmuxmacs--with-buffer-refresh
+     (let ()
+       (if (equal (tmuxmacs-core/id-type pane-id) :pane)
+	   (let ((command (read-string "command: ")))
+	     (tmuxmacs-pane/send-command pane-id command))
+	 (message "Point is not at a pane."))))
+    (tmuxmacs-view/goto-id pane-id)
+    (when tail-showing?
+      (tmuxmacs-view/toggle-pane-tail))
+    (tmuxmacs-view/goto-id pane-id)))
+
+(defun tmuxmacs/move-window ()
+  (interactive)
+  (tmuxmacs--with-buffer-refresh
+   (let ((window-id (tmuxmacs-view/id-at-point)))
+     (if (equal (tmuxmacs-core/id-type window-id) :window)
+	 (let ((session-id (cdr (tmuxmacs-view/session-selection))))
+	   (tmuxmacs-window/move window-id session-id))
+       (warn "Point is not at a window")))))
+
+(defmacro tmuxmacs/save-excursion (&rest body)
+  (let ((window-id (gensym)))
+    `(let ((,window-id (tmuxmacs-window/focused)))
+       (progn ,@body)
+       (tmuxmacs-window/focus ,window-id))))
+
+(defun tmuxmacs/move-pane ()
+  (interactive)
+  (tmuxmacs/save-excursion
+   (tmuxmacs--with-buffer-refresh
+    (let ((pane-id (tmuxmacs-view/id-at-point)))
+      (if (equal (tmuxmacs-core/id-type pane-id) :pane)
+	  (let ((window-id (cdr (tmuxmacs-view/window-selection))))
+	    (tmuxmacs-pane/move pane-id window-id :horizontal? t))
+	(warn "point is not at a pane"))))))
+
+
+(defun tmuxmacs/pane-tail ()
+  (interactive)
+  (tmuxmacs-view/toggle-pane-tail))
+
+(defun tmuxmacs/pane-tail-refresh ()
+  (interactive)
+  (tmuxmacs-view/pane-tail-refresh))
+
+(defun tmuxmacs--formatted-panes ()
+  (mapcar
+   (lambda (pane)
+     (cl-destructuring-bind
+	   (&key pane_id window_id window_name session_name session_id &allow-other-keys)
+	 pane
+       (format "%s [%s] < %s"
+	       pane_id (or window_name window_id) (or session_name session_id))))
+   (tmuxmacs-pane/list)))
+
+(defun tmuxmacs/pane-send-command ()
+  (interactive)
+  (let* ((panes (tmuxmacs--formatted-panes))
+	 (selected-pane (car (split-string (completing-read "select a pane: " panes nil t))))
+	 (command (read-string "command: ")))
+    (tmuxmacs-pane/send-command selected-pane command)))
 
 (provide 'tmuxmacs)
 ;;; tmuxmacs.el ends here
